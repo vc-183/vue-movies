@@ -1,0 +1,247 @@
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="lib/css/bootstrap.css">
+    <script src="lib/js/jquery-3.4.1.js"></script>
+    <script src="lib/js/bootstrap.js"></script>
+    <script src="lib/js/popper.js"></script>
+    <script src="lib/js/vue.js"></script>
+</head>
+
+<body>
+    <div id="app">
+        <div class="container">
+            <h3 class="text-center">电影管理</h3>
+            <form class="well form-horizontal text-center">
+                编号:<input type="text" class="input-large" v-model="id" id="id" :disabled="flag" v-focus> &nbsp; &nbsp;
+                剧名:<input type="text" class="input-large" v-model="name" id="name"> &nbsp; &nbsp;
+                类型:<input type="text" class="" v-model="type" id="type"> &nbsp; &nbsp;
+                <!--    上映时间:<input type="number" class="" v-model="date" id="date"> &nbsp; &nbsp; -->
+                <button type="button" class="btn" @click="handle" :disabled="submitFlag" :class="classFlag">添加</button>
+            </form>
+            <h4>目前可观看的总数:<span>{{total}}</span></h4>
+            <table class="table table-striped table-inverse table-responsive table-bordered bg-success">
+                <thead class="thead-inverse bg-info">
+                    <tr>
+                        <th>编号</th>
+                        <th>名称</th>
+                        <th>类型</th>
+                        <th>上映时间</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr :key="item.id" v-for="item in movies">
+                        <td scope="row">{{item.id}}</td>
+                        <td>{{item.name}}</td>
+                        <td>{{item.type}}</td>
+                        <td>{{item.date |format('yyyy-MM-dd hh:mm:ss')}}</td>
+                        <td>
+                            <a href="" @click.prevent="modify(item.id)">修改</a>
+                            <span>|</span>
+                            <a href="" @click.prevent="del(item.id)">删除</a></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+
+    <script>
+        //文本获得焦点
+        Vue.directive("focus", {
+            inserted: function (el) {
+                el.focus();
+            }
+        })
+        //格式化日期
+        Vue.filter('format', function (value, arg) {
+            function dateFormat(date, format) {
+                if (typeof date === "string") {
+                    var mts = date.match(/(\/Date\((\d+)\)\/)/);
+                    if (mts && mts.length >= 3) {
+                        date = parseInt(mts[2]);
+                    }
+                }
+                date = new Date(date);
+                if (!date || date.toUTCString() == "Invalid Date") {
+                    return "";
+                }
+                var map = {
+                    "M": date.getMonth() + 1, //月份 
+                    "d": date.getDate(), //日 
+                    "h": date.getHours(), //小时 
+                    "m": date.getMinutes(), //分 
+                    "s": date.getSeconds(), //秒 
+                    "q": Math.floor((date.getMonth() + 3) / 3), //季度 
+                    "S": date.getMilliseconds() //毫秒 
+                };
+                format = format.replace(/([yMdhmsqS])+/g, function (all, t) {
+                    var v = map[t];
+                    if (v !== undefined) {
+                        if (all.length > 1) {
+                            v = '0' + v;
+                            v = v.substr(v.length - 2);
+                        }
+                        return v;
+                    } else if (t === 'y') {
+                        return (date.getFullYear() + '').substr(4 - all.length);
+                    }
+                    return all;
+                });
+                return format;
+            }
+            return dateFormat(value, arg);
+        })
+        new Vue({
+            el: "#app",
+            data: {
+                classFlag: "bg-info",
+                normalClass: "bg-info",
+                errorClass: "bg-danger",
+                submitFlag: false,
+                flag: false,
+                id: "",
+                name: "",
+                type: "",
+                movies: [],
+            },
+            methods: {
+                //添加
+                handle: function () {
+                    var date = new Date();
+                    /*  console.log(date); */
+                    //判断id是否已经存在 若存在则是修改操作 没有则是添加操作
+                    if (this.flag) { //flag为真则是修改  flag为假则是添加
+                        //编辑图书
+                        //根据当前的id去更新数组中的数据
+                        this.movies.some((item) => {
+                            if (item.id == this.id) {
+                                item.name = this.name;
+                                item.type = this.type;
+                                item.date = this.date;
+                                console.log(this.name);
+
+                                //完成操作终止循环
+                                return true;
+                            }
+                        });
+                    } else {
+                        //添加图书
+                        var movies = {};
+                        movies.id = this.id;
+                        movies.name = this.name;
+                        movies.type = this.type;
+                        //时间自动生成
+                        movies.date = date;
+                        this.movies.push(movies);
+
+                    }
+                    this.id = "";
+                    this.name = "";
+                    this.type = "";
+                    this.date = "";
+                    this.flag = false;
+
+                },
+                //修改
+                modify: function (id) {
+                    //禁止编号的修改
+                    this.flag = true;
+                    //根据ID查找出要修改的内容并显示出来
+                    var movie = this.movies.filter(function (item) {
+                        return item.id == id;
+                    })
+                    /*      console.log(movie[0]);*/
+                    this.id = movie[0].id;
+                    this.name = movie[0].name;
+                    this.type = movie[0].type;
+                    this.date = movie[0].date;
+                },
+                //删除 
+                del: function (id) {
+                    /* 方法一 */
+                    /*   //根据id从数组中查找元素的索引
+                      var index = this.movies.findIndex(function () {
+                          return item.id == id;
+                      });
+                      //根据索引删除数组元素
+                      this.movies.splice(index, 1); */
+                    /* 方法二  */
+                    //通过filter方法进行删除
+                    this.movies = this.movies.filter(function (item) {
+                        return item.id != id;
+                    });
+                },
+
+            },
+            //计算图书总书
+            computed: {
+                total: function () {
+                    return this.movies.length;
+                }
+            },
+            // 验证图书名称是否已经存在  若存在则禁用提交按钮 
+            watch: {
+                id: function (val) {
+                    var flag = this.movies.some(function (item) {
+                        return item.id == val;
+                    })
+                    if (flag) {
+                        //flag 为真 图书存在    禁用提交按钮 
+                        this.submitFlag = true;
+                        this.classFlag = this.errorClass;
+                        return true;
+                    } else {
+                        //flag 为假 图书不存在 
+                        this.submitFlag = false;
+                        this.classFlag = this.normalClass;
+                    }
+                },
+                name: function (val) {
+                    var flag = this.movies.some(function (item) {
+                        return item.name == val;
+                    })
+                    if (flag) {
+                        //flag 为真 图书存在    禁用提交按钮 
+                        this.submitFlag = true;
+                        this.classFlag = this.errorClass;
+                    } else {
+                        //flag 为假 图书不存在 
+                        this.submitFlag = false;
+                        this.classFlag = this.normalClass;
+                    }
+                },
+            },
+            mounted: function () {
+                // 该生命周期钩子函数被触发的时候，模板已经可以使用
+                // 一般此时用于获取后台数据，然后把数据填充到模板
+                var data = [{
+                        id: 1,
+                        name: "邪恶力量",
+                        type: "悬疑魔幻",
+                        date: 1521609975000,
+                    },
+                    {
+                        id: 2,
+                        name: "神探伽俐略",
+                        type: "推理探案",
+                        date: 1222609975000,
+                    },
+                    {
+                        id: 3,
+                        name: "爱情公寓",
+                        type: "都市爱情喜剧",
+                        date: 1325309975000
+                    }
+                ]
+                this.movies = data;
+            }
+        })
+    </script>
+</body>
+
+</html>
